@@ -1,0 +1,5 @@
+setup.py
+Simpliciti_Player.egg-info/PKG-INFO
+Simpliciti_Player.egg-info/SOURCES.txt
+Simpliciti_Player.egg-info/dependency_links.txt
+Simpliciti_Player.egg-info/top_level.txt
