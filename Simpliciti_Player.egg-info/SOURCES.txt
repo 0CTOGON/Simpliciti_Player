@@ -1,3 +1,5 @@
+LICENSE
+README.md
 setup.py
 Simpliciti_Player.egg-info/PKG-INFO
 Simpliciti_Player.egg-info/SOURCES.txt

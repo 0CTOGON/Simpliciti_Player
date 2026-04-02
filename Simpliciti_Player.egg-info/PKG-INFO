@@ -2,4 +2,6 @@ Metadata-Version: 2.4
 Name: Simpliciti-Player
 Version: 1.0
 Summary: A music player... without the muck.
+License-File: LICENSE
+Dynamic: license-file
 Dynamic: summary

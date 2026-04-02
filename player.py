@@ -1,42 +1,34 @@
-import customtkinter as ctk
-from tkinter import filedialog
-import pygame
 import os
-import json
-import random
-import ctypes
 import sys
 from pathlib import Path
 
-# ----- 3rd‑party audio meta data --------------------------------
+# 🔧 DLL FIX (must be before pygame import)
+if getattr(sys, "frozen", False):
+    os.add_dll_directory(str(Path(sys.executable).parent))
+
+import customtkinter as ctk
+from tkinter import filedialog
+import pygame
+import json
+import random
+import ctypes
 from mutagen.mp3 import MP3
 from mutagen.wave import WAVE
 from PIL import Image
 
 # --------------------------------------------------------------
-# 1️⃣   APP‑DATA PATH SETUP
+# APPDATA PATH
 # --------------------------------------------------------------
-# 1️⃣.1  Cross‑platform “user data” folder -------------------------------------------------
-# You can replace this with the tiny `appdirs` package if you prefer:
-#   from appdirs import user_data_dir
-#   APPDATA_ROOT = Path(user_data_dir("SimplicitiPlayer"))
-# For pure‑standard‑lib we construct it manually on Windows:
-
 if sys.platform.startswith("win"):
-    # Windows → %APPDATA% (Roaming)
     APPDATA_ROOT = Path(os.getenv("APPDATA")) / "SimplicitiPlayer"
 else:
-    # macOS & Linux → XDG / Home fallback
     APPDATA_ROOT = Path.home() / ".simpliciti_player"
 
-# 1️⃣.2  Make sure the folder exists -------------------------------------------------
 APPDATA_ROOT.mkdir(parents=True, exist_ok=True)
-
-# 1️⃣.3  Where the JSON file will live ------------------------------------------------
 PLAYLIST_FILE = APPDATA_ROOT / "playlist.json"
 
 # --------------------------------------------------------------
-# 2️⃣   TKINTER / PYGAME INITIALISATION
+# INIT
 # --------------------------------------------------------------
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -44,7 +36,7 @@ ctk.set_default_color_theme("blue")
 pygame.mixer.init()
 pygame.mixer.music.set_volume(1.0)
 
-playlist = []          # list of absolute file‑paths (strings)
+playlist = []
 current_index = 0
 is_playing = False
 paused = False
@@ -52,7 +44,7 @@ loop_mode = False
 shuffle_mode = False
 
 # --------------------------------------------------------------
-# 3️⃣   FONTS & SIZES (unchanged)
+# FONTS
 # --------------------------------------------------------------
 p = ("Google Sans Code", 12)
 h = ("Google Sans Code", 22, "bold")
@@ -66,29 +58,27 @@ BTN_MAIN = 50
 BTN_SMALL = 40
 
 # --------------------------------------------------------------
-# 4️⃣   HELPER: RESOURCE PATH (works both when frozen & when running from source)
+# RESOURCE PATH
 # --------------------------------------------------------------
 def resource_path(relative_path: str) -> Path:
     if getattr(sys, "frozen", False):
-        # cx_Freeze executable directory
         base_path = Path(sys.executable).parent
     else:
-        # running from source
         base_path = Path(__file__).parent
-
     return base_path / relative_path
 
 # --------------------------------------------------------------
-# 5️⃣   APP WINDOW SETUP
+# WINDOW
 # --------------------------------------------------------------
 app = ctk.CTk()
 app.geometry("400x370")
 app.title("Simpliciti Player")
+
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Simpliciti.Player.1")
 app.iconbitmap(str(resource_path("icons/logo.ico")))
 app.overrideredirect(True)
 
-# ----- Task‑bar fix (unchanged) ---------------------------------
+# Taskbar fix
 app.update_idletasks()
 hwnd = ctypes.windll.user32.GetParent(app.winfo_id())
 GWL_EXSTYLE = -20
@@ -101,7 +91,7 @@ app.withdraw()
 app.after(10, app.deiconify)
 
 # --------------------------------------------------------------
-# 6️⃣   CUSTOM TITLE BAR (unchanged)
+# TITLE BAR
 # --------------------------------------------------------------
 title_bar = ctk.CTkFrame(app, height=30)
 title_bar.pack(fill="x")
@@ -125,12 +115,18 @@ def close_app():
 logo_img = ctk.CTkImage(Image.open(resource_path("icons/logo.png")), size=(20, 20))
 ctk.CTkLabel(title_bar, image=logo_img, text="").pack(side="left", padx=5)
 ctk.CTkLabel(title_bar, text="Simpliciti", font=small).pack(side="left", padx=5)
-ctk.CTkButton(title_bar, text="✕", width=30,
-              fg_color="transparent", hover_color="#ff0000",
-              command=close_app).pack(side="right", padx=5)
+
+ctk.CTkButton(
+    title_bar,
+    text="✕",
+    width=30,
+    fg_color="transparent",
+    hover_color="#ff0000",
+    command=close_app
+).pack(side="right", padx=5)
 
 # --------------------------------------------------------------
-# 7️⃣   ICONS (unchanged, now loaded via resource_path)
+# ICONS
 # --------------------------------------------------------------
 loop_img = ctk.CTkImage(Image.open(resource_path("icons/loop.png")), size=ICON_SMALL)
 shuffle_img = ctk.CTkImage(Image.open(resource_path("icons/shuffle.png")), size=ICON_SMALL)
@@ -141,11 +137,10 @@ rewind_img = ctk.CTkImage(Image.open(resource_path("icons/rewind.png")), size=IC
 forward_img = ctk.CTkImage(Image.open(resource_path("icons/forward.png")), size=ICON_MAIN)
 
 add_img = ctk.CTkImage(Image.open(resource_path("icons/add.png")), size=ICON_ADD)
-
 logo_big_img = ctk.CTkImage(Image.open(resource_path("icons/logo.png")), size=(100, 100))
 
 # --------------------------------------------------------------
-# 8️⃣   UI ELEMENTS (unchanged)
+# UI
 # --------------------------------------------------------------
 title = ctk.CTkLabel(app, text="", image=logo_big_img, font=h)
 title.pack(pady=(10, 10))
@@ -157,10 +152,9 @@ time_label = ctk.CTkLabel(app, text="00:00 / 00:00", font=p)
 time_label.pack(pady=(5, 15))
 
 # --------------------------------------------------------------
-# 9️⃣   PLAYLIST PERSISTENCE (now in AppData)
+# PLAYLIST
 # --------------------------------------------------------------
 def get_track_length(path: str) -> float:
-    """Return length in seconds (supports MP3 & WAV)."""
     if path.lower().endswith(".mp3"):
         return MP3(path).info.length
     if path.lower().endswith(".wav"):
@@ -168,46 +162,39 @@ def get_track_length(path: str) -> float:
     return 0.0
 
 def format_time(seconds: float) -> str:
-    """Convert seconds → mm:ss string."""
     return f"{int(seconds // 60):02d}:{int(seconds % 60):02d}"
 
-def save_playlist() -> None:
-    """Write the current `playlist` list to the JSON file in AppData."""
+def save_playlist():
     try:
-        # `playlist` contains absolute paths – they are safe to JSON‑dump.
         with PLAYLIST_FILE.open("w", encoding="utf-8") as f:
-            json.dump(playlist, f, ensure_ascii=False, indent=2)
+            json.dump(playlist, f, indent=2)
     except Exception as e:
-        # In a real app you might want to log this somewhere.
-        print(f"[DEBUG] Could not write playlist: {e}")
+        print(f"[DEBUG] Save error: {e}")
 
-def load_playlist() -> None:
-    """Read the JSON file from AppData (if it exists) and populate `playlist`."""
+def load_playlist():
     global playlist
     try:
         if PLAYLIST_FILE.is_file():
             with PLAYLIST_FILE.open("r", encoding="utf-8") as f:
                 playlist = json.load(f)
     except Exception as e:
-        print(f"[DEBUG] Could not read playlist: {e}")
+        print(f"[DEBUG] Load error: {e}")
 
-def add_songs() -> None:
-    """Open file‑dialog, append selected files to the list, then persist."""
+def add_songs():
     files = filedialog.askopenfilenames(
         filetypes=[("Audio Files", "*.mp3 *.wav")],
-        title="Add songs to Simpliciti"
+        title="Add songs"
     )
     if files:
         playlist.extend(files)
         save_playlist()
-        # If nothing was playing before, start the first newly added track:
         if not is_playing and not paused:
             play_track(0)
 
 # --------------------------------------------------------------
-# 10️⃣   PLAYBACK LOGIC (unchanged, only tiny refactors)
+# PLAYBACK
 # --------------------------------------------------------------
-def play_track(index: int | None = None) -> None:
+def play_track(index=None):
     global current_index, is_playing, paused
     if not playlist:
         return
@@ -220,7 +207,7 @@ def play_track(index: int | None = None) -> None:
     play_btn.configure(image=pause_img)
     update_status()
 
-def toggle_play() -> None:
+def toggle_play():
     global is_playing, paused
     if not playlist:
         return
@@ -239,7 +226,7 @@ def toggle_play() -> None:
         play_btn.configure(image=pause_img)
     update_status()
 
-def next_track() -> None:
+def next_track():
     global current_index
     if shuffle_mode and len(playlist) > 1:
         current_index = random.choice([i for i in range(len(playlist)) if i != current_index])
@@ -247,12 +234,12 @@ def next_track() -> None:
         current_index = (current_index + 1) % len(playlist)
     play_track()
 
-def prev_track() -> None:
+def prev_track():
     global current_index
     current_index = (current_index - 1) % len(playlist)
     play_track()
 
-def update_status() -> None:
+def update_status():
     if not playlist:
         status.configure(text="No track loaded")
         time_label.configure(text="00:00 / 00:00")
@@ -265,29 +252,27 @@ def update_status() -> None:
     else:
         status.configure(text=f"⏹ {name}")
 
-def update_time_label() -> None:
+def update_time_label():
     if playlist:
-        pos = pygame.mixer.music.get_pos() / 1000   # milliseconds → seconds
+        pos = pygame.mixer.music.get_pos() / 1000
         total = get_track_length(playlist[current_index])
         time_label.configure(text=f"{format_time(pos)} / {format_time(total)}")
     app.after(500, update_time_label)
 
-def set_volume(value: float) -> None:
+def set_volume(value):
     pygame.mixer.music.set_volume(value)
 
-def toggle_loop() -> None:
+def toggle_loop():
     global loop_mode
     loop_mode = not loop_mode
     loop_btn.configure(fg_color="#1f6aa5" if loop_mode else "transparent")
 
-def toggle_shuffle() -> None:
+def toggle_shuffle():
     global shuffle_mode
     shuffle_mode = not shuffle_mode
     shuffle_btn.configure(fg_color="#1f6aa5" if shuffle_mode else "transparent")
 
-def check_track_end() -> None:
-    """Poll every second – if the current track stopped playing,
-    either loop it or jump to the next one."""
+def check_track_end():
     if playlist and not pygame.mixer.music.get_busy() and is_playing:
         if loop_mode:
             play_track(current_index)
@@ -296,71 +281,44 @@ def check_track_end() -> None:
     app.after(1000, check_track_end)
 
 # --------------------------------------------------------------
-# 11️⃣   CONTROLS UI (unchanged)
+# CONTROLS
 # --------------------------------------------------------------
 controls = ctk.CTkFrame(app)
 controls.pack(pady=10)
 
-loop_btn = ctk.CTkButton(
-    controls, image=loop_img, text="",
-    width=BTN_SMALL, height=BTN_SMALL,
-    fg_color="transparent", hover_color="#333",
-    command=toggle_loop
-)
+loop_btn = ctk.CTkButton(controls, image=loop_img, text="", width=BTN_SMALL, height=BTN_SMALL,
+                         fg_color="transparent", command=toggle_loop)
 loop_btn.grid(row=0, column=0, padx=5)
 
-prev_btn = ctk.CTkButton(
-    controls, image=rewind_img, text="",
-    width=BTN_MAIN, height=BTN_MAIN,
-    fg_color="transparent", hover_color="#333",
-    command=prev_track
-)
+prev_btn = ctk.CTkButton(controls, image=rewind_img, text="", width=BTN_MAIN, height=BTN_MAIN,
+                         fg_color="transparent", command=prev_track)
 prev_btn.grid(row=0, column=1, padx=5)
 
-play_btn = ctk.CTkButton(
-    controls, image=play_img, text="",
-    width=BTN_MAIN, height=BTN_MAIN,
-    fg_color="transparent", hover_color="#333",
-    command=toggle_play
-)
+play_btn = ctk.CTkButton(controls, image=play_img, text="", width=BTN_MAIN, height=BTN_MAIN,
+                         fg_color="transparent", command=toggle_play)
 play_btn.grid(row=0, column=2, padx=5)
 
-next_btn = ctk.CTkButton(
-    controls, image=forward_img, text="",
-    width=BTN_MAIN, height=BTN_MAIN,
-    fg_color="transparent", hover_color="#333",
-    command=next_track
-)
+next_btn = ctk.CTkButton(controls, image=forward_img, text="", width=BTN_MAIN, height=BTN_MAIN,
+                         fg_color="transparent", command=next_track)
 next_btn.grid(row=0, column=3, padx=5)
 
-shuffle_btn = ctk.CTkButton(
-    controls, image=shuffle_img, text="",
-    width=BTN_SMALL, height=BTN_SMALL,
-    fg_color="transparent", hover_color="#333",
-    command=toggle_shuffle
-)
+shuffle_btn = ctk.CTkButton(controls, image=shuffle_img, text="", width=BTN_SMALL, height=BTN_SMALL,
+                            fg_color="transparent", command=toggle_shuffle)
 shuffle_btn.grid(row=0, column=4, padx=5)
 
-# ➕ Add button (top‑left)
-add_btn = ctk.CTkButton(
-    app, image=add_img, text="",
-    width=36, height=36,
-    fg_color="transparent", hover_color="#333",
-    command=add_songs
-)
+add_btn = ctk.CTkButton(app, image=add_img, text="", width=36, height=36,
+                        fg_color="transparent", command=add_songs)
 add_btn.place(x=12, y=35)
 
-# Volume slider
 ctk.CTkLabel(app, text="Volume", font=small).pack()
-volume = ctk.CTkSlider(app, from_=0, to=1,
-                      number_of_steps=100, command=set_volume)
+volume = ctk.CTkSlider(app, from_=0, to=1, number_of_steps=100, command=set_volume)
 volume.set(1.0)
 volume.pack(pady=5)
 
 # --------------------------------------------------------------
-# STARTUP – load playlist, kick timers, start UI loop
+# START
 # --------------------------------------------------------------
-load_playlist()               # <‑‑ reads from AppData
+load_playlist()
 update_time_label()
 check_track_end()
 app.mainloop()

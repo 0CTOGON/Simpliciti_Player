@@ -1,7 +1,6 @@
 import sys
 from cx_Freeze import setup, Executable
 
-# Dependencies to include
 build_exe_options = {
     "packages": [
         "customtkinter",
@@ -13,9 +12,9 @@ build_exe_options = {
     "include_files": [
         ("icons", "icons"),
     ],
+    "include_msvcr": True,  # important for Windows runtime
 }
 
-# Define the executable
 exe = Executable(
     script="player.py",
     base="Win32GUI" if sys.platform == "win32" else None,
