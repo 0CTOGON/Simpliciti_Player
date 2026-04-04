@@ -16,6 +16,15 @@ from mutagen.mp3 import MP3
 from mutagen.wave import WAVE
 from PIL import Image
 
+# 🎯 DRAG & DROP
+try:
+    from tkinterdnd2 import DND_FILES, TkinterDnD
+    HAS_DND = True
+    # We'll create the root window with TkinterDnD instead of CTk
+except ImportError:
+    HAS_DND = False
+    TkinterDnD = None
+
 # --------------------------------------------------------------
 # APPDATA PATH
 # --------------------------------------------------------------
@@ -70,13 +79,28 @@ def resource_path(relative_path: str) -> Path:
 # --------------------------------------------------------------
 # WINDOW
 # --------------------------------------------------------------
-app = ctk.CTk()
+# Use TkinterDnD.Tk if available, otherwise fall back to CTk
+if HAS_DND and TkinterDnD:
+    app = TkinterDnD.Tk()
+    # Apply dark styling to TkinterDnD window (uses tkinter config, not CustomTkinter)
+    app.configure(bg="#212121")
+else:
+    app = ctk.CTk()
+
 app.geometry("400x370")
 app.title("Simpliciti Player")
 
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Simpliciti.Player.1")
 app.iconbitmap(str(resource_path("icons/logo.ico")))
 app.overrideredirect(True)
+
+# 🎯 DRAG & DROP SETUP
+if HAS_DND:
+    try:
+        app.drop_target_register(DND_FILES)
+        app.dnd_bind("<<Drop>>", lambda e: handle_drop_event(e))
+    except Exception as e:
+        print(f"[DEBUG] Drag & drop setup failed: {e}")
 
 # Taskbar fix
 app.update_idletasks()
@@ -179,6 +203,35 @@ def load_playlist():
                 playlist = json.load(f)
     except Exception as e:
         print(f"[DEBUG] Load error: {e}")
+
+def handle_drop_event(event):
+    """Handle drag & drop files into the player."""
+    global playlist
+
+    # Parse dropped files (tkinterdnd2 format: {C:\file1.mp3} {C:\file2.wav})
+    data = event.data
+
+    # Split by spaces and clean up braces
+    files = []
+    for item in data.split():
+        # Remove braces if present
+        path = item.strip('{}')
+        if path:
+            files.append(path)
+
+    # Filter for audio files
+    valid_files = [f for f in files if f.lower().endswith((".mp3", ".wav"))]
+
+    if valid_files:
+        playlist.extend(valid_files)
+        save_playlist()
+
+        # Auto-play if nothing is playing
+        if not is_playing and not paused:
+            play_track(0)
+
+        status.configure(text=f"Added {len(valid_files)} song(s)!")
+        app.after(2000, update_status)  # revert message after 2 seconds
 
 def add_songs():
     files = filedialog.askopenfilenames(

@@ -8,6 +8,7 @@ build_exe_options = {
         "pygame",
         "mutagen",
         "PIL",
+        "tkinterdnd2",
     ],
     "include_files": [
         ("icons", "icons"),
