@@ -1,6 +1,6 @@
 # Simpliciti Player ♪
 
-###### I did it! After lots of coding, testing, and debugging, Simpliciti Player is finally alive.  
+> I did it! After lots of coding, testing, and debugging, Simpliciti Player is finally alive.  
 
 Oh, hey there! This is my music player. It’s simple, fast, and just works.
 Alright, Let’s do the boring bit.
@@ -52,7 +52,10 @@ I’ll review and merge it if it fits the project. Keep it fun and clean!
 Some features we're planning for in future updates:
 - ~~Drag'n'drop songs~~ Added!
 - Scrubber
-- Add Mac and Linux (Debian, Red Hat, and Arch) support
+- Add Mac and Linux (Debian, Red Hat, and Arch) support.
+  > Quick Note:
+  > For this feature please could any Linux/Mac users help me out here and build on their machine?
+  > Thanks, you're amazing!
 - Keyboard shortcuts
 - View Playlist/Delete songs from playlist
 
