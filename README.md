@@ -3,7 +3,9 @@
 > I did it! After lots of coding, testing, and debugging, Simpliciti Player is finally alive.  
 
 Oh, hey there! This is my music player. It’s simple, fast, and just works.
-Alright, Let’s do the boring bit.
+>Hang on, isn't there a boring bit I need to do?
+
+>Oh yeah, there is...
 
 ---
 
@@ -13,6 +15,7 @@ Alright, Let’s do the boring bit.
 - Loop and shuffle tracks  
 - Custom installer for Windows via cx_Freeze + Inno Setup  
 - Clean, modern UI built with CustomTkinter
+- Drag'n'Drop your songs
 
 ---
 
@@ -54,7 +57,9 @@ Some features we're planning for in future updates:
 - Scrubber
 - Add Mac and Linux (Debian, Red Hat, and Arch) support.
   > Quick Note:
+  
   > For this feature please could any Linux/Mac users help me out here and build on their machine?
+  
   > Thanks, you're amazing!
 - Keyboard shortcuts
 - View Playlist/Delete songs from playlist
@@ -62,5 +67,6 @@ Some features we're planning for in future updates:
 
 ---
 
-###### Ok, back to the cute bit…  
+> Ok, back to the cute bit…
+
 Have fun, and enjoy! ♪
